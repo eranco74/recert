@@ -120,7 +120,7 @@ pub(crate) async fn fix_kube_apiserver_configs(etcd_client: &Arc<InMemoryK8sEtcd
     Ok(())
 }
 
-pub(crate) async fn fix_etcd_endpoints(etcd_client: &Arc<InMemoryK8sEtcd>, ip: &str) -> Result<()> {
+pub(crate) async fn fix_etcd_endpoints(etcd_client: &Arc<InMemoryK8sEtcd>,original_ip: &str,  ip: &str) -> Result<()> {
     join_all(
         etcd_client
             .list_keys("configmaps/openshift-etcd/etcd-endpoints".to_string().as_str())
@@ -148,10 +148,15 @@ pub(crate) async fn fix_etcd_endpoints(etcd_client: &Arc<InMemoryK8sEtcd>, ip: &
                     .as_object_mut()
                     .context("data not an object")?;
 
-                ensure!(data.len() == 1, "data has more than one key, is this SNO?");
-
-                let current_member_id = data.keys().next().unwrap().clone();
-                data[&current_member_id] = serde_json::Value::String(ip.to_string());
+                let id = if let Some((key, _)) = data.into_iter().find(|(_, v)| **v ==     Value::String(original_ip.to_string())) {
+                    // Update the value for the found key       
+                    println!("Found key '{}' with value '{}' and updated to '{}'", key, original_ip, ip);
+                    key.clone()    
+                } else {
+                    bail!("No key found with value '{}', this is data: {:#?}", original_ip, data);
+                };
+                data.insert(id.to_string(), serde_json::Value::String(ip.to_string()));
+                    
 
                 put_etcd_yaml(etcd_client, &k8s_resource_location, configmap).await?;
 

@@ -54,7 +54,7 @@ async fn fix_etcd_resources(etcd_client: &Arc<InMemoryK8sEtcd>, ip: &str) -> Res
         .await
         .context("fixing openshift apiserver config configmap")?;
 
-    etcd_rename::fix_etcd_endpoints(etcd_client, ip)
+    etcd_rename::fix_etcd_endpoints(etcd_client, &original_ip, ip)
         .await
         .context("fixing etcd secrets")?;
 
