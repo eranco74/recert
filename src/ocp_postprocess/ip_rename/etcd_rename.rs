@@ -149,14 +149,17 @@ pub(crate) async fn fix_etcd_endpoints(etcd_client: &Arc<InMemoryK8sEtcd>,origin
                     .context("data not an object")?;
 
                 let id = if let Some((key, _)) = data.into_iter().find(|(_, v)| **v ==     Value::String(original_ip.to_string())) {
-                    // Update the value for the found key       
+                    // Update the value for the found key
                     println!("Found key '{}' with value '{}' and updated to '{}'", key, original_ip, ip);
-                    key.clone()    
+                    key.clone()
                 } else {
-                    bail!("No key found with value '{}', this is data: {:#?}", original_ip, data);
+                    println!("No key found with value '{}', this is data: {:#?}", original_ip, data);
+                    "".to_string()
                 };
-                data.insert(id.to_string(), serde_json::Value::String(ip.to_string()));
-                    
+                if !id.is_empty(){
+                    data.insert(id.to_string(), serde_json::Value::String(ip.to_string()));
+
+                }
 
                 put_etcd_yaml(etcd_client, &k8s_resource_location, configmap).await?;
 
