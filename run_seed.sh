@@ -37,6 +37,12 @@ mkdir -p backup/etc_orig backup/var_orig backup/etcd_orig backup/etcd
 tar -C backup/etc_orig -xzf backup/etc.tgz etc --strip-components=1
 tar -C backup/var_orig -xzf backup/var.tgz var --strip-components=1
 
+# fix etcd
+etcdctl snapshot restore backup/var/lib/etcd/member/snap/db --name editor --initial-cluster="editor=https://localhost:2380" --initial-cluster-token openshift-etcd-121618ba-8a84-40ed-a79c-5fdc2187852b --initial-advertise-peer-urls https://localhost:2380 --data-dir backup/var/lib/etcd/restore-121618ba-8a84-40ed-a79c-5fdc2187852b --skip-hash-check=true
+rm -rf backup/var/lib/etcd/member/
+mv backup/var/lib/etcd/restore-121618ba-8a84-40ed-a79c-5fdc2187852b/member backup/var/lib/etcd/
+
+
 podman kill editor >/dev/null || true
 podman rm editor >/dev/null || true
 
@@ -108,7 +114,6 @@ use_cert_rules:
     BgIejfD1dYW2Fp02z5sF6Pw6vhobpfDYgsTAKNonh5P6NxMiD14eQxYrNJ6DAF0=
     -----END CERTIFICATE-----
 cluster_rename: new-name:foo.com:some-random-infra-id
-hostname: test.hostname
 ip: 192.168.126.99
 kubeadmin_password_hash: "$2a$10$20Q4iRLy7cWZkjn/D07bF.RZQZonKwstyRGH0qiYbYRkx5Pe4Ztyi"
 additional_trust_bundle: |
@@ -190,10 +195,8 @@ else
 		--use-cert ./hack/dummy_use_cert.crt \
         \
 		--cluster-rename new-name:foo.com:some-random-infra-id \
-		--hostname test.hostname \
 		--ip 192.168.126.99 \
 		--kubeadmin-password-hash '$2a$10$20Q4iRLy7cWZkjn/D07bF.RZQZonKwstyRGH0qiYbYRkx5Pe4Ztyi' \
-		--additional-trust-bundle ./hack/dummy_trust_bundle.pem \
 		--pull-secret '{"auths":{"empty_registry":{"username":"empty","password":"empty","auth":"ZW1wdHk6ZW1wdHk=","email":""}}}' \
         \
 		--summary-file summary.yaml \
